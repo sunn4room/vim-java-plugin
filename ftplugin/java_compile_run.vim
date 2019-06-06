@@ -1,7 +1,7 @@
-if exists("b:java_function")
+if exists("b:java_compile_run")
 	finish
 endif
-let b:java_function = 1
+let b:java_compile_run = 1
 
 nnoremap <buffer> <F5> :call CompileJava()<cr>
 nnoremap <buffer> <F6> :call RunJava()<cr>
@@ -99,4 +99,3 @@ function JavaStamp()
 		endif
 	endif
 endfunction
-
