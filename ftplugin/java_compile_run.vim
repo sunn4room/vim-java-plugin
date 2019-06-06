@@ -10,8 +10,9 @@ function RunJava()
 	if !exists("b:jtype")
 		call JavaStamp()
 	endif
+	let fullname=GetFullName()
 	if b:jtype=="simple"
-		exec "Cmd java ".GetFullName()
+		exec "Cmd java ".fullname
 	elseif b:jtype=="normal"
 		let curpath=getcwd()
 		let mainpath=strpart(curpath,0,strridx(curpath."/","/src/"))
@@ -19,9 +20,9 @@ function RunJava()
 		exec "chdir ".mainpath
 		let jars=systemlist("find lib -name *.jar")
 		if jars[0]=~"^find.*"
-			exec "Cmd java -cp class ".GetFullName()
+			exec "Cmd java -cp class ".fullname
 		else
-			exec "Cmd java -cp class:".join(jars,":")." ".GetFullName()
+			exec "Cmd java -cp class:".join(jars,":")." ".fullname
 		endif
 		exec "chdir ".curpath
 		set autochdir
@@ -37,9 +38,9 @@ function RunJava()
 			endif
 		endfor
 		if run=="exec"
-			exec 'Mvn exec:java -Dexec.mainClass="'.GetFullName().'" -Dexec.cleanupDaemonThreads=false'
+			exec 'Mvn exec:java -Dexec.mainClass="'.fullname.'" -Dexec.cleanupDaemonThreads=false'
 		else
-			exec 'Mvn spring-boot:run -DmainClass="'.GetFullName().'"'
+			exec 'Mvn spring-boot:run -DmainClass="'.fullname.'"'
 		endif
 	endif
 endfunction
