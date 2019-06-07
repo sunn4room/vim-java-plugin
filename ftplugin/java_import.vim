@@ -11,28 +11,32 @@ for cur in split(&rtp,",")
 	endif
 endfor
 
+autocmd BufEnter *.java call JavaEnter()
+nnoremap <buffer> <leader>js :call ScanClass()<cr>
+nnoremap <buffer> i :call SeekPackage()<CR>:call PlaceImport()<CR>
+inoremap <buffer> i <esc>hh:call SeekPackage()<CR>:call PlaceImport()<CR>
+nnoremap <buffer> o :call SeekPackage()<CR>:call AddPackage()<CR>
+inoremap <buffer> o <esc>hh:call SeekPackage()<CR>:call AddPackage()<CR>
+nnoremap <buffer> <C-Right> :call SwitchRightFqnames()<CR>
+nnoremap <buffer> <C-Left> :call SwitchLeftFqnames()<CR>
 
-function! JavaEnter()
+function JavaEnter()
 	if !exists("g:classdic")
 		call ScanClass()
 	else
-		call RunningClass()
+		call execute("syn keyword runningClass ".join(g:keyws," "))
+		call execute("hi runningClass ctermfg=81 cterm=none")
 	endif
 endfunction
 
-function! RunningClass()
-	call execute("syn keyword runningClass ".join(g:keyws," "))
-	call execute("hi runningClass ctermfg=81 cterm=none")
-endfunction
-
-func! ScanClass()
+function ScanClass()
 	if !exists("b:jtype")
 		call JavaStamp()
 	endif
-	call job_start(['/bin/bash', '-c', 'python3 '.s:path.'/python/scan_class.py '.b:jtype], {'callback': 'ScanClassHandler'})
-endfunc
+	call job_start('python3 '.s:path.'/python/scan_class.py '.b:jtype.' '.b:jpath, {'callback': 'ScanClassHandler'})
+endfunction
 
-func! ScanClassHandler(channel, msg)
+function ScanClassHandler(channel, msg)
 	exec "let g:classdic=".a:msg
 	let g:keyws=keys(g:classdic)
 	call filter(g:keyws, 'v:val != "Contains"')
@@ -50,8 +54,69 @@ func! ScanClassHandler(channel, msg)
 	call filter(g:keyws, 'v:val != "Skipwhite"')
 	call filter(g:keyws, 'v:val != "Skipnl"')
 	call filter(g:keyws, 'v:val != "Skipempty"')
-	call RunningClass()
-	echo "ScanClass has been completed"
-endfunc
+	call execute("syn keyword runningClass ".join(g:keyws," "))
+	call execute("hi runningClass ctermfg=81 cterm=none")
+	echo "ScanClass Done."
+endfunction
 
-nnoremap <buffer> <F10> :echo GetFolder()<cr>
+
+function PeekWord()
+	normal bve"ay
+	return @a
+endfunction
+
+
+function SeekPackage()
+	let s:fqnames = split(g:classdic[PeekWord()],":")
+	call add(s:fqnames,"######")
+endfunction
+
+function PlaceImport()
+	let flag = 0
+	let linemax = line(".")
+	normal mj
+	for ii in range(1,linemax)
+		let line = getline(ii)
+		if line =~ '^package.*'
+			let flag = ii + 1
+		elseif line =~ '^import.*'
+			let flag = ii
+		endif
+	endfor
+	call append(flag,"import ".s:fqnames[0].";")
+	let s:curidx = 0
+	call cursor(flag+1,1)
+	let s:curlinenum = flag+1
+	let s:curstarts = 7
+	let s:curends = 7 + strlen(s:fqnames[0])
+endfunction
+
+function AddPackage()
+	let line = getline(s:curlinenum)
+	let tmp1 = strpart(line,0,s:curstarts)
+	let tmp2 = strpart(line,s:curends)
+	call setline(s:curlinenum,tmp1.s:fqnames[0].tmp2)
+	let s:curends = s:curstarts + strlen(s:fqnames[0])
+endfunction
+
+function SwitchLeftFqnames()
+	if s:curidx != 0
+		let s:curidx -= 1
+		let line = getline(s:curlinenum)
+		let tmp1 = strpart(line,0,s:curstarts)
+		let tmp2 = strpart(line,s:curends)
+		call setline(s:curlinenum,tmp1.s:fqnames[s:curidx].tmp2)
+		let s:curends = s:curstarts + strlen(s:fqnames[s:curidx])
+	endif
+endfunction
+
+function SwitchRightFqnames()
+	if s:curidx + 1 < len(s:fqnames)
+		let s:curidx += 1
+		let line = getline(s:curlinenum)
+		let tmp1 = strpart(line,0,s:curstarts)
+		let tmp2 = strpart(line,s:curends)
+		call setline(s:curlinenum,tmp1.s:fqnames[s:curidx].tmp2)
+		let s:curends = s:curstarts + strlen(s:fqnames[s:curidx])
+	endif
+endfunction

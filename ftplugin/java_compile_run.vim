@@ -14,10 +14,8 @@ function RunJava()
 	if b:jtype=="simple"
 		exec "Cmd java ".fullname
 	elseif b:jtype=="normal"
-		let curpath=getcwd()
-		let mainpath=strpart(curpath,0,strridx(curpath."/","/src/"))
 		set noautochdir
-		exec "chdir ".mainpath
+		exec "chdir ".b:jpath
 		let jars=systemlist("find lib -name *.jar")
 		if jars[0]=~"^find.*"
 			exec "Cmd java -cp class ".fullname
@@ -64,10 +62,8 @@ function CompileJava()
 	if b:jtype=="simple"
 		exec "Cmd javac %"
 	elseif b:jtype=="normal"
-		let curpath=getcwd()
-		let mainpath=strpart(curpath,0,strridx(curpath."/","/src/"))
 		set noautochdir
-		exec "chdir ".mainpath
+		exec "chdir ".b:jpath
 		if isdirectory(mainpath+"/class")
 			call system("rm -rf class")
 		endif
@@ -86,12 +82,16 @@ function CompileJava()
 endfunction
 
 function JavaStamp()
-	let curpath=getcwd()
+	let curpath=expand("%:p")
+	let curpath=strpart(curpath,0,strridx(curpath,"/"))
 	let srcidx=strridx(curpath."/","/src/")
+	echo srcidx
 	if srcidx<0
 		let b:jtype="simple"
+		let b:jpath=curpath
 	else
 		let srcpath=strpart(curpath,0,srcidx)
+		let b:jpath=srcpath
 		if filereadable(srcpath."/pom.xml")
 			let b:jtype="maven"
 		else
